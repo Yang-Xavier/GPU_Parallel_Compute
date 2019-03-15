@@ -244,13 +244,12 @@ void cpu_cal() {
 	printf("CPU RUNNING\n");
 	int i, j, ci, cj; // for index
 	int r_ = 0, g_ = 0, b_ = 0; // to calculate the average rgb
-	int r_acc = 0, g_acc = 0, b_acc = 0; // accumulated rgb
+	int r_acc = 0, g_acc = 0, b_acc = 0; // accumulated rgb for each block
+	int rc = 0, gc = 0, bc = 0; // accumulated rgb for whole image
 	int i_c = c, j_c = c; // to solve the boundry overflow problem
 	int counter;
 	for (i = 0; i < height; i += c) { // row in image
 		for (j = 0; j < width * 3; j += 3 * c) { // column in image
-												 //i_c = (i + c)  > height ? (height - c) : c; // to judge whether overflow row num
-												 //j_c = (i + c * 3) > width * 3 ? (width - c) : c; // judge whether overflow column
 
 			for (ci = i, r_acc = 0, g_acc = 0, b_acc = 0, counter = 0; ci < i + c && ci < height; ci++) {  // row in block
 				for (cj = j; cj < j + c * 3 && cj < width * 3; cj += 3, counter++) {  // column in block
@@ -263,6 +262,10 @@ void cpu_cal() {
 				r_avg = r_acc / counter,
 				g_avg = g_acc / counter,
 				b_avg = b_acc / counter;
+				
+			rc += r_acc;
+			gc += g_acc;
+			bc += b_acc;
 
 			for (ci = i; ci < i + c && ci < height; ci++) {  // row in block
 				for (cj = j; cj < j + c * 3 && cj < width * 3; cj += 3) {  // column in block
@@ -280,9 +283,9 @@ void cpu_cal() {
 		}
 	}
 
-	r = r_ / ((width / c)*(width / c));
-	g = g_ / ((width / c)*(width / c));
-	b = b_ / ((width / c)*(width / c));
+	r = rc / (width * height);
+	g = gc / (width * height);
+	b = bc / (width * height);
 }
 
 
@@ -290,7 +293,7 @@ void openmp_cal() {
 	printf("OPENMP RUNNING\n");
 
 	int r_ = 0, g_ = 0, b_ = 0; // to calculate the average rgb
-
+	int rc = 0, gc = 0, bc = 0; // accumulated rgb for whole image
 	int i;
 #pragma omp parallel for
 	for (i = 0; i < height; i += c) { // row in image
@@ -298,8 +301,7 @@ void openmp_cal() {
 		int j;
 #pragma omp parallel for
 		for (j = 0; j < width * 3; j += 3 * c) { // column in image
-												 //i_c = (i + c)  > height ? (height - c) : c; // to judge whether overflow row num
-												 //j_c = (i + c * 3) > width * 3 ? (width - c) : c; // judge whether overflow column
+												 
 			int  ci, cj; // for index
 			int r_acc, g_acc, b_acc; // accumulated rgb
 			int i_c = c, j_c = c; // to solve the boundry overflow problem
@@ -321,7 +323,9 @@ void openmp_cal() {
 			g_avg = g_acc / counter;
 			b_avg = b_acc / counter;
 
-
+			rc += r_acc;
+			gc += g_acc;
+			bc += b_acc;
 
 			for (ci = i; ci < i + c && ci < height; ci++) {  // row in block
 
@@ -342,9 +346,9 @@ void openmp_cal() {
 
 
 	}
-	r = r_ / ((width / c)*(width / c));
-	g = g_ / ((width / c)*(width / c));
-	b = b_ / ((width / c)*(width / c));
+	r = rc / (width * height);
+	g = gc / (width * height);
+	b = bc / (width * height);
 
 }
 
