@@ -49,7 +49,7 @@ int main(int argc, char *argv[]) {
 		clock_t start = clock(), diff;
 		//TODO: calculate the average colour value
 
-		cpu_cal();
+		//cpu_cal();
 
 		// Output the average colour value for the image
 		printf("CPU Average image colour red = %d, green = %d, blue = %d \n", r, g, b);
@@ -86,7 +86,7 @@ int main(int argc, char *argv[]) {
 
 
 	}
-	output(out_file); // Output to file
+	//output(out_file); // Output to file
 
 	//save the output image file (from last executed mode)
 	free(data);
@@ -153,7 +153,7 @@ int read_data(const char* fname) {
 	int i = 0, j = 0;
 	int header_len = 0;
 
-	fp = fopen(fname, "r");
+	fp = fopen(fname, "rb");
 	if (fp == NULL) { perror(fname); return 0; }
 
 	// Read first four line and alloc the memory to the next part of data
@@ -171,6 +171,7 @@ int read_data(const char* fname) {
 		header_len += strlen(s);
 	}
 
+
 	width = (unsigned int)detail[0];
 	height = (unsigned int)detail[1];
 	if (c > width) { c = 1; }
@@ -179,38 +180,45 @@ int read_data(const char* fname) {
 
 
 	if (strcmp(ftype, "P3") == 0) {
+		char * buf = ( char *)malloc(width*height * 3 * 10 * sizeof(char));
 
-		int ch;
-		int i = 0;
-		int app_row, app_col;
-		char *all = (char*)malloc(width * 13 * height);
+		fread(buf, sizeof(char), width*height * 3 * 10, fp); // read all data from the file
 
-		while ((ch = fgetc(fp)) != EOF) {  // read the data from the file and replace \t and \n with space
-			if ((char)ch == '\t') {
-				ch = (int)'\ ';
-			}
-			if ((char)ch == '\n') {
-				ch = (int)'\ ';
-			}
-			all[i] = (char)ch;
-			i++;
-		}
-		char* term;
+		//printf("%s", buf);
+		//int ch;
+		//int i = 0;
+		//int app_row, app_col;
+		//char *all = (char*)malloc(width * 13 * height);
 
-		term = strtok(all, "\ "); // split the data by space and store it
-		i = 0;
-		int row = -1, column = 0;
-		while (i < width * height * 3) {
-			if (i % (width * 3) == 0) {
-				row += 1;
-				column = 0;
-				pixel_data[row] = (unsigned int *)malloc(width * 3 * sizeof(unsigned int));
-			}
-			*(*(pixel_data + row) + column) = (unsigned int)atoi(term);
-			term = strtok(NULL, "\ ");
-			column++;
-			i++;
-		}
+		//while ((ch = fgetc(fp)) != EOF) {  // read the data from the file and replace \t and \n with space
+		//	if ((char)ch == '\t') {
+		//		ch = (int)'\ ';
+		//	}
+		//	if ((char)ch == '\n') {
+		//		ch = (int)'\ ';
+		//	}
+		//	all[i] = (char)ch;
+		//	i++;
+		//}
+		//char* term;
+
+		//term = strtok(all, "\ "); // split the data by space and store it
+		//i = 0;
+		//int row = -1, column = 0;
+		//while (i < width * height * 3) {
+		//	if (i % (width * 3) == 0) {
+		//		row += 1;
+		//		column = 0;
+		//		pixel_data[row] = (unsigned int *)malloc(width * 3 * sizeof(unsigned int));
+		//	}
+		//	*(*(pixel_data + row) + column) = (unsigned int)atoi(term);
+		//	term = strtok(NULL, "\ ");
+		//	column++;
+		//	i++;
+		//}
+
+
+
 	}
 	fclose(fp);
 
