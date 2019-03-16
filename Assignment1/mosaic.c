@@ -49,7 +49,7 @@ int main(int argc, char *argv[]) {
 		clock_t start = clock(), diff;
 		//TODO: calculate the average colour value
 
-		//cpu_cal();
+		cpu_cal();
 
 		// Output the average colour value for the image
 		printf("CPU Average image colour red = %d, green = %d, blue = %d \n", r, g, b);
@@ -86,7 +86,7 @@ int main(int argc, char *argv[]) {
 
 
 	}
-	//output(out_file); // Output to file
+	output(out_file); // Output to file
 
 	//save the output image file (from last executed mode)
 	free(data);
@@ -172,52 +172,52 @@ int read_data(const char* fname) {
 	}
 
 
-	width = (unsigned int)detail[0];
-	height = (unsigned int)detail[1];
+	width = ( int)detail[0];
+	height = ( int)detail[1];
 	if (c > width) { c = 1; }
 	if (c > height) { c = 1; }
 	unsigned int *(*pixel_data) = (unsigned int *)malloc(height * sizeof(unsigned int *)); // the memory allocate to store the pixel data
 
 
 	if (strcmp(ftype, "P3") == 0) {
-		char * buf = ( char *)malloc(width*height * 3 * 10 * sizeof(char));
+		int data_len = width*height * 3 * 5;
+		char * buf = ( char *)malloc(data_len * sizeof(char));
 
-		fread(buf, sizeof(char), width*height * 3 * 10, fp); // read all data from the file
+		fread(buf, sizeof(char), data_len, fp); // read all data from the file
+		
+		int i = 0, num_index = 0;
+		int term_index = 0, ch_index = 0;
+		int row = 0;
+		int col = 0;
+		char ch;
 
-		//printf("%s", buf);
-		//int ch;
-		//int i = 0;
-		//int app_row, app_col;
-		//char *all = (char*)malloc(width * 13 * height);
+		char* term = (char *)malloc(3 * sizeof(char));
+		for (row = 0; row < height; row++) {
+			pixel_data[row] = (unsigned int *)malloc(width * 3 * sizeof(unsigned int));
+		}
+		row = -1;
 
-		//while ((ch = fgetc(fp)) != EOF) {  // read the data from the file and replace \t and \n with space
-		//	if ((char)ch == '\t') {
-		//		ch = (int)'\ ';
-		//	}
-		//	if ((char)ch == '\n') {
-		//		ch = (int)'\ ';
-		//	}
-		//	all[i] = (char)ch;
-		//	i++;
-		//}
-		//char* term;
+		while (i < data_len && num_index < height*width*3) {
+			ch = *(buf + i);
+			if (ch >= '0' && ch <= '9') {
+				*(term + ch_index) = ch;
+				ch_index++;
+			}
+			else {
+				if (num_index % (width * 3) == 0) {
+					row += 1;
+					col = 0;
+					
+				}
 
-		//term = strtok(all, "\ "); // split the data by space and store it
-		//i = 0;
-		//int row = -1, column = 0;
-		//while (i < width * height * 3) {
-		//	if (i % (width * 3) == 0) {
-		//		row += 1;
-		//		column = 0;
-		//		pixel_data[row] = (unsigned int *)malloc(width * 3 * sizeof(unsigned int));
-		//	}
-		//	*(*(pixel_data + row) + column) = (unsigned int)atoi(term);
-		//	term = strtok(NULL, "\ ");
-		//	column++;
-		//	i++;
-		//}
-
-
+				*(*(pixel_data + row) + col) = (unsigned int)atoi(term);
+				ch_index = 0;
+				num_index++;
+				col++;
+				memset(term, ' ', 3 * sizeof(char));
+			}
+			i++;
+		}
 
 	}
 	fclose(fp);
