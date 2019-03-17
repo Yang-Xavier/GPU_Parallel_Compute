@@ -12,12 +12,13 @@
 
 
 
+
 typedef enum MODE { CPU, OPENMP, CUDA, ALL } MODE;
 typedef enum OUTPUT_MODE { PPM_BINARY, PPM_PLAIN_TEXT } OUTPUT_MODE;
 
 void print_help();
 int process_command_line(int argc, char *argv[]);
-int read_data(char* fname);
+int ** read_data(char* fname);
 void cpu_cal();
 void openmp_cal();
 double log2(double n);
@@ -63,15 +64,17 @@ int main(int argc, char *argv[]) {
 	}
 	case (OPENMP): {
 		//TODO: starting timing here
-		clock_t start = clock(), diff;
+		//clock_t start = clock(), diff;
 		//TODO: calculate the average colour value
+		double begin, diff;
+		begin = omp_get_wtime();
 		openmp_cal();
 		// Output the average colour value for the image
 		printf("OPENMP Average image colour red = %d, green = %d, blue = %d \n", r, g, b);
 
 		//TODO: end timing here
-		diff = clock() - start;
-		int msec = diff * 1000 / CLOCKS_PER_SEC;
+		diff = omp_get_wtime() - begin;
+		int msec = diff * 1000;
 		printf("OPENMP mode execution time took %d s and %dms\n", msec / 1000, msec % 1000);
 		break;
 	}
@@ -81,6 +84,29 @@ int main(int argc, char *argv[]) {
 	}
 	case (ALL): {
 		//TODO
+		clock_t start = clock(), diff;
+		//TODO: calculate the average colour value
+
+		cpu_cal();
+
+		// Output the average colour value for the image
+		printf("CPU Average image colour red = %d, green = %d, blue = %d \n", r, g, b);
+		//TODO: end timing here
+		diff = clock() - start;
+		int msec = diff * 1000 / CLOCKS_PER_SEC;
+		printf("CPU mode execution time took %d s and %dms\n", msec / 1000, msec % 1000);
+
+		start = clock();
+		//TODO: calculate the average colour value
+		openmp_cal();
+		// Output the average colour value for the image
+		printf("OPENMP Average image colour red = %d, green = %d, blue = %d \n", r, g, b);
+
+		//TODO: end timing here
+		diff = clock() - start;
+		msec = diff * 1000 / CLOCKS_PER_SEC;
+		printf("OPENMP mode execution time took %d s and %dms\n", msec / 1000, msec % 1000);
+
 		break;
 	}
 
@@ -144,7 +170,7 @@ int process_command_line(int argc, char *argv[]) {
 /** Read data from the file and do pre-processing
 Store the pixel data into the array and return the pointer of the array
 */
-int read_data(const char* fname) {
+int ** read_data(const char* fname) {
 	FILE* fp;
 	char ppm_header[256];
 	int detail[3];
@@ -164,37 +190,39 @@ int read_data(const char* fname) {
 
 	while (j < 3) {
 		char *s = fgets(ppm_header, sizeof ppm_header, fp);
-		if (s[0] >= '0' && s[0] <= '9') {
+		if (s[0] >= '0' && s[0] <= '9') {	// To pass the comment
 			detail[j] = atoi(s);
 			j++;
 		}
 		header_len += strlen(s);
 	}
 
-
 	width = ( int)detail[0];
 	height = ( int)detail[1];
+
 	if (c > width) { c = 1; }
 	if (c > height) { c = 1; }
+
 	unsigned int *(*pixel_data) = (unsigned int *)malloc(height * sizeof(unsigned int *)); // the memory allocate to store the pixel data
 
 
 	if (strcmp(ftype, "P3") == 0) {
+		int i = 0;
+		int ch_index = 0;	//  record the number of the character in each number string 
+		int num_index = 0; // record the number of integer number
+		int row;
+		int col;
+		char ch;
 		int data_len = width*height * 3 * 5;
 		char * buf = ( char *)malloc(data_len * sizeof(char));
 
 		fread(buf, sizeof(char), data_len, fp); // read all data from the file
 		
-		int i = 0, num_index = 0;
-		int term_index = 0, ch_index = 0;
-		int row = 0;
-		int col = 0;
-		char ch;
-
 		char* term = (char *)malloc(3 * sizeof(char));
 		for (row = 0; row < height; row++) {
 			pixel_data[row] = (unsigned int *)malloc(width * 3 * sizeof(unsigned int));
 		}
+
 		row = -1;
 
 		while (i < data_len && num_index < height*width*3) {
@@ -207,9 +235,7 @@ int read_data(const char* fname) {
 				if (num_index % (width * 3) == 0) {
 					row += 1;
 					col = 0;
-					
 				}
-
 				*(*(pixel_data + row) + col) = (unsigned int)atoi(term);
 				ch_index = 0;
 				num_index++;
@@ -220,14 +246,11 @@ int read_data(const char* fname) {
 		}
 
 	}
-	fclose(fp);
 
 	if (strcmp(ftype, "P6") == 0) {
-		fopen(fname, "rb");
-		fseek(fp, header_len * sizeof(char), 0);
-		// binary format
-		unsigned char * buf = (unsigned char *)malloc(width*height * 3 * sizeof(unsigned char));
 		int column, row, k;
+		unsigned char * buf = (unsigned char *)malloc(width*height * 3 * sizeof(unsigned char));
+
 		fread(buf, sizeof(unsigned char), width*height * 3, fp); // read all data from the file
 		for (row = 0, k = 0; row < height; row++) {
 			pixel_data[row] = (unsigned int *)malloc(width * 3 * sizeof(unsigned int));
@@ -239,14 +262,12 @@ int read_data(const char* fname) {
 		fclose(fp);
 	}
 
-
 	return pixel_data;
 }
 
 double log2(double n) {
 	return log(n) / log(2);
 }
-
 
 void cpu_cal() {
 	printf("CPU RUNNING\n");
@@ -296,28 +317,24 @@ void cpu_cal() {
 	b = bc / (width * height);
 }
 
-
 void openmp_cal() {
 	printf("OPENMP RUNNING\n");
 
 	int r_ = 0, g_ = 0, b_ = 0; // to calculate the average rgb
 	int rc = 0, gc = 0, bc = 0; // accumulated rgb for whole image
 	int i;
-#pragma omp parallel for
+int r_acc, g_acc, b_acc; // accumulated rgb
+#pragma omp parallel for reduction(+: r_ , g_ , b_)
 	for (i = 0; i < height; i += c) { // row in image
-		
 		int j;
-#pragma omp parallel for
+		int  ci, cj; // for index
+		int counter=0;
+		int r_avg = 0, g_avg = 0, b_avg = 0;
+
+#pragma omp parallel for reduction(+: rc , gc , bc,r_acc, g_acc, b_acc)
 		for (j = 0; j < width * 3; j += 3 * c) { // column in image
-												 
-			int  ci, cj; // for index
-			int r_acc, g_acc, b_acc; // accumulated rgb
-			int i_c = c, j_c = c; // to solve the boundry overflow problem
-			int counter;
-			unsigned int r_avg = 0, g_avg = 0, b_avg = 0;
 
 			for (ci = i, r_acc = 0, g_acc = 0, b_acc = 0, counter = 0; ci < i + c && ci < height; ci++) {  // row in block
-
 				for (cj = j; cj < j + c * 3 && cj < width * 3; cj += 3, counter++) {  // column in block
 
 					r_acc += *(*(data + ci) + cj + 0);
@@ -325,34 +342,25 @@ void openmp_cal() {
 					b_acc += *(*(data + ci) + cj + 2);
 				}
 			}
-
-
 			r_avg = r_acc / counter;
-			g_avg = g_acc / counter;
-			b_avg = b_acc / counter;
+			b_avg = g_acc / counter;
+			g_avg = b_acc / counter;
 
 			rc += r_acc;
 			gc += g_acc;
 			bc += b_acc;
-
+		
 			for (ci = i; ci < i + c && ci < height; ci++) {  // row in block
-
 				for (cj = j; cj < j + c * 3 && cj < width * 3; cj += 3) {  // column in block
-
 					*(*(data + ci) + cj + 0) = r_avg;
 					*(*(data + ci) + cj + 1) = g_avg;
 					*(*(data + ci) + cj + 2) = b_avg;
 				}
 			}
-
 			r_ += r_avg;
 			g_ += g_avg;
 			b_ += b_avg;
-
-
 		}
-
-
 	}
 	r = rc / (width * height);
 	g = gc / (width * height);
@@ -407,6 +415,7 @@ int output(char * fname) {
 
 		fclose(fp);
 		break;
+
 	case(PPM_BINARY):
 		fp = fopen(fname, "wb");
 		fputs("P6\n", fp);
@@ -430,6 +439,7 @@ int output(char * fname) {
 		break;
 	}
 	printf("The file has been saved as %s", out_file);
+	return SUCCESS;
 }
 
 
