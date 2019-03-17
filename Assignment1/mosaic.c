@@ -21,7 +21,6 @@ int process_command_line(int argc, char *argv[]);
 int ** read_data(char* fname);
 void cpu_cal();
 void openmp_cal();
-double log2(double n);
 int output(char * fname);
 
 unsigned int c = 0;
@@ -116,6 +115,7 @@ int main(int argc, char *argv[]) {
 
 	//save the output image file (from last executed mode)
 	free(data);
+
 	getchar();
 	return 0;
 }
@@ -244,6 +244,7 @@ int ** read_data(const char* fname) {
 			}
 			i++;
 		}
+		free(buf);
 
 	}
 
@@ -265,7 +266,7 @@ int ** read_data(const char* fname) {
 	return pixel_data;
 }
 
-double log2(double n) {
+inline double log2(double n) {
 	return log(n) / log(2);
 }
 
@@ -277,6 +278,7 @@ void cpu_cal() {
 	int rc = 0, gc = 0, bc = 0; // accumulated rgb for whole image
 	int i_c = c, j_c = c; // to solve the boundry overflow problem
 	int counter;
+
 	for (i = 0; i < height; i += c) { // row in image
 		for (j = 0; j < width * 3; j += 3 * c) { // column in image
 
@@ -436,6 +438,8 @@ int output(char * fname) {
 
 		fwrite(bin_data, sizeof(unsigned char), width*height * 3 * sizeof(unsigned char), fp);
 		fclose(fp);
+		free(bin_data);
+		
 		break;
 	}
 	printf("The file has been saved as %s", out_file);
