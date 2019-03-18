@@ -23,7 +23,7 @@ void cpu_cal();
 void openmp_cal();
 int output(char * fname);
 
-unsigned int c = 0;
+int c = 0;
 unsigned int width = 0;
 unsigned int height = 0;
 unsigned int ** data;
@@ -40,6 +40,7 @@ int main(int argc, char *argv[]) {
 
 
 	//TODO: read input image file (either binary or plain text PPM) 
+	printf("Reading data from %s \n", in_file);
 	data = read_data(in_file);
 
 	//TODO: execute the mosaic filter based on the mode
@@ -147,10 +148,17 @@ int process_command_line(int argc, char *argv[]) {
 	//first argument is always the executable name
 
 	//read in the non optional command line arguments
-	c = (unsigned int)atoi(argv[1]);
+
+	c = atoi(argv[1]);
+
+	if (c <= 0) {
+		printf("The value of c is invalid.");
+		return FAILURE;
+
+	}
 
 	c = pow(2.0, (double)(int)log2(c)); // change the value of c to be valid
-
+	
 
 	if (!strcmp(argv[2], "CPU")) { execution_mode = CPU; };
 	if (!strcmp(argv[2], "OPENMP")) { execution_mode = OPENMP; };
@@ -177,7 +185,6 @@ int ** read_data(const char* fname) {
 	char ftype[4];
 	char* rp;
 	int i = 0, j = 0;
-	int header_len = 0;
 
 	fp = fopen(fname, "rb");
 	if (fp == NULL) { perror(fname); return 0; }
@@ -186,15 +193,14 @@ int ** read_data(const char* fname) {
 	fgets(ftype, sizeof ftype, fp); // Get the type of the input file
 	rp = strtok(ftype, "\n");	//split by using \n
 	*ftype = *rp;
-	header_len += strlen(ftype) + 1;
+
 
 	while (j < 3) {
 		char *s = fgets(ppm_header, sizeof ppm_header, fp);
 		if (s[0] >= '0' && s[0] <= '9') {	// To pass the comment
 			detail[j] = atoi(s);
-			j++;
+			j++;	// to count useful information
 		}
-		header_len += strlen(s);
 	}
 
 	width = ( int)detail[0];
@@ -207,24 +213,26 @@ int ** read_data(const char* fname) {
 
 
 	if (strcmp(ftype, "P3") == 0) {
-		int i = 0;
-		int ch_index = 0;	//  record the number of the character in each number string 
-		int num_index = 0; // record the number of integer number
+		int i;
 		int row;
 		int col;
-		char ch;
-		int data_len = width*height * 3 * 5;
+		int ch_index = 0;	//  record the number of the character in each number string 
+		int num_index = 0; // record the number of integer number
+		int data_len = width * height * 3 * 5;
+
+		char ch;	// each character in buf
 		char * buf = ( char *)malloc(data_len * sizeof(char));
+		char* term = (char *)malloc(3 * sizeof(char));
 
 		fread(buf, sizeof(char), data_len, fp); // read all data from the file
 		
-		char* term = (char *)malloc(3 * sizeof(char));
 		for (row = 0; row < height; row++) {
 			pixel_data[row] = (unsigned int *)malloc(width * 3 * sizeof(unsigned int));
 		}
 
-		row = -1;
 
+		row = -1;
+		i = 0;
 		while (i < data_len && num_index < height*width*3) {
 			ch = *(buf + i);
 			if (ch >= '0' && ch <= '9') {
@@ -346,8 +354,8 @@ void openmp_cal() {
 				}
 			}
 			r_avg = r_acc / counter;
-			b_avg = g_acc / counter;
-			g_avg = b_acc / counter;
+			g_avg = g_acc / counter;
+			b_avg = b_acc / counter;
 
 			rc += r_acc;
 			gc += g_acc;
@@ -378,7 +386,8 @@ int output(char * fname) {
 	unsigned char* bin_data;
 	char* str_buf[10];
 	char* char_num = (char*)malloc(4);
-	int l;
+
+	printf("String writing---------------\n");
 	switch (output_mode) {
 
 	case(PPM_PLAIN_TEXT):
