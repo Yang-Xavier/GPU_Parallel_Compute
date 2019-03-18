@@ -325,7 +325,8 @@ void openmp_cal() {
 	int r_ = 0, g_ = 0, b_ = 0; // to calculate the average rgb
 	int rc = 0, gc = 0, bc = 0; // accumulated rgb for whole image
 	int i;
-int r_acc, g_acc, b_acc; // accumulated rgb
+	int r_acc, g_acc, b_acc; // accumulated rgb
+
 #pragma omp parallel for reduction(+: r_ , g_ , b_)
 	for (i = 0; i < height; i += c) { // row in image
 		int j;
